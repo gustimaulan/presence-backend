@@ -84,12 +84,12 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Presence Data API Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
-  console.log(`📖 API Status: http://localhost:${PORT}/api/status`);
+  console.log(`🔗 API Base URL: http://0.0.0.0:${PORT}/api`);
+  console.log(`❤️  Health Check: http://0.0.0.0:${PORT}/health`);
+  console.log(`📖 API Status: http://0.0.0.0:${PORT}/api/status`);
   
   // Log Google Sheets configuration status
   const hasSheetId = !!process.env.GOOGLE_SHEET_ID;
