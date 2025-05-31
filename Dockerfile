@@ -13,15 +13,11 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application code
 COPY . .
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# Change ownership of the app directory to the existing node user
+RUN chown -R node:node /app
 
-# Change ownership of the app directory to nodejs user
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
+# Switch to non-root user (node user already exists in node:alpine image)
+USER node
 
 # Expose port
 EXPOSE 3000
