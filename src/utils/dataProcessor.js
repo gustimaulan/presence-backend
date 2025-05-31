@@ -161,4 +161,86 @@ export const paginateData = (data, page = 1, pageSize = 100) => {
       hasPreviousPage: currentPage > 1
     }
   };
+};
+
+/**
+ * Filter data by search term across multiple fields
+ * @param {Array} data - Data array to search
+ * @param {string} searchTerm - Search term to filter by
+ * @returns {Array} - Filtered data array
+ */
+export const searchData = (data, searchTerm) => {
+  if (!searchTerm || !Array.isArray(data)) {
+    return data;
+  }
+
+  const term = searchTerm.toLowerCase().trim();
+  
+  if (!term) {
+    return data;
+  }
+
+  return data.filter(item => {
+    // Search across multiple fields
+    const searchableFields = [
+      item['Nama Tentor'] || '',           // Teacher name
+      item['Nama Siswa'] || '',            // Student name
+      item['Hari dan Tanggal Les'] || '',  // Lesson date
+      item['Jam Kegiatan Les'] || '',      // Lesson time
+      item['Timestamp'] || ''              // Timestamp
+    ];
+
+    // Check if any field contains the search term
+    return searchableFields.some(field => 
+      field.toString().toLowerCase().includes(term)
+    );
+  });
+};
+
+/**
+ * Filter data by multiple search criteria
+ * @param {Array} data - Data array to search
+ * @param {Object} searchCriteria - Search criteria object
+ * @returns {Array} - Filtered data array
+ */
+export const advancedSearch = (data, searchCriteria) => {
+  if (!searchCriteria || !Array.isArray(data)) {
+    return data;
+  }
+
+  let filteredData = data;
+
+  // General search term
+  if (searchCriteria.search) {
+    filteredData = searchData(filteredData, searchCriteria.search);
+  }
+
+  // Teacher name filter
+  if (searchCriteria.teacher) {
+    const teacherTerm = searchCriteria.teacher.toLowerCase().trim();
+    filteredData = filteredData.filter(item => 
+      (item['Nama Tentor'] || '').toLowerCase().includes(teacherTerm)
+    );
+  }
+
+  // Student name filter
+  if (searchCriteria.student) {
+    const studentTerm = searchCriteria.student.toLowerCase().trim();
+    filteredData = filteredData.filter(item => 
+      (item['Nama Siswa'] || '').toLowerCase().includes(studentTerm)
+    );
+  }
+
+  // Date range filter
+  if (searchCriteria.dateFrom || searchCriteria.dateTo) {
+    filteredData = filteredData.filter(item => {
+      const itemDate = parseTimestamp(item['Timestamp'] || '');
+      const fromDate = searchCriteria.dateFrom ? new Date(searchCriteria.dateFrom) : new Date('1900-01-01');
+      const toDate = searchCriteria.dateTo ? new Date(searchCriteria.dateTo) : new Date('2100-12-31');
+      
+      return itemDate >= fromDate && itemDate <= toDate;
+    });
+  }
+
+  return filteredData;
 }; 

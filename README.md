@@ -66,12 +66,17 @@ A RESTful API backend for fetching and serving presence/attendance data from Goo
 ## 📚 API Endpoints
 
 ### 🔍 GET `/api/data`
-Retrieve paginated attendance data with optional year filtering.
+Retrieve paginated attendance data with optional year filtering and search capabilities.
 
 **Query Parameters:**
 - `year` (optional): Filter data by year (e.g., `2025`)
 - `page` (optional): Page number (default: 1)
 - `pageSize` (optional): Items per page (default: 100, max: 1000)
+- `search` (optional): General search term (searches across all fields)
+- `teacher` (optional): Filter by teacher name (partial match)
+- `student` (optional): Filter by student name (partial match)
+- `dateFrom` (optional): Filter from date (YYYY-MM-DD format)
+- `dateTo` (optional): Filter to date (YYYY-MM-DD format)
 
 **Examples:**
 ```bash
@@ -81,11 +86,23 @@ GET /api/data
 # Get data for year 2025
 GET /api/data?year=2025
 
-# Get page 2 with 50 items per page
-GET /api/data?page=2&pageSize=50
+# Search for specific teacher
+GET /api/data?teacher=john
 
-# Get 2025 data, page 2, 50 items
-GET /api/data?year=2025&page=2&pageSize=50
+# Search for specific student
+GET /api/data?student=maria
+
+# General search across all fields
+GET /api/data?search=mathematics
+
+# Combined filters
+GET /api/data?year=2025&teacher=john&page=2&pageSize=50
+
+# Date range search
+GET /api/data?dateFrom=2025-01-01&dateTo=2025-01-31
+
+# Complex search with multiple criteria
+GET /api/data?year=2025&search=math&teacher=john&student=maria
 ```
 
 **Response:**
@@ -102,9 +119,56 @@ GET /api/data?year=2025&page=2&pageSize=50
     "hasPreviousPage": false
   },
   "filters": {
-    "year": "2025"
+    "year": "2025",
+    "search": {
+      "search": "mathematics",
+      "teacher": "john"
+    }
   },
-  "fetchedAt": "2025-01-08T10:30:00.000Z"
+  "fetchedAt": "2025-01-08T10:30:00.000Z",
+  "fetchTime": "1200ms",
+  "totalRecordsBeforeFilter": 5000,
+  "totalRecordsAfterFilter": 150
+}
+```
+
+### 🔍 GET `/api/search`
+Dedicated search endpoint for quick search functionality.
+
+**Query Parameters:**
+- `q` or `search` (required): Search term
+- `page` (optional): Page number (default: 1)
+- `pageSize` (optional): Items per page (default: 100, max: 1000)
+
+**Examples:**
+```bash
+# Quick search
+GET /api/search?q=john
+
+# Search with pagination
+GET /api/search?search=mathematics&page=2&pageSize=25
+```
+
+**Response:**
+```json
+{
+  "cached": false,
+  "data": [...],
+  "pagination": {
+    "currentPage": 1,
+    "pageSize": 100,
+    "totalItems": 45,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false
+  },
+  "search": {
+    "term": "john",
+    "totalMatches": 45,
+    "searchTime": "15ms"
+  },
+  "fetchedAt": "2025-01-08T10:30:00.000Z",
+  "fetchTime": "1200ms"
 }
 ```
 
@@ -117,7 +181,8 @@ Force refresh data from Google Sheets, bypassing cache.
   "message": "Data refreshed successfully",
   "data": [...],
   "totalRecords": 1250,
-  "refreshedAt": "2025-01-08T10:30:00.000Z"
+  "refreshedAt": "2025-01-08T10:30:00.000Z",
+  "fetchTime": "1200ms"
 }
 ```
 
@@ -178,6 +243,30 @@ Clear all cache entries (admin endpoint).
   "timestamp": "2025-01-08T10:30:00.000Z"
 }
 ```
+
+## 🔍 Search Features
+
+### **Search Capabilities:**
+- **General Search**: Searches across all text fields (teacher, student, date, time, timestamp)
+- **Field-Specific Search**: Target specific fields (teacher, student)
+- **Date Range Filtering**: Filter by date ranges
+- **Combined Filters**: Mix multiple search criteria
+- **Case-Insensitive**: All searches are case-insensitive
+- **Partial Matching**: Supports partial text matches
+- **Cached Results**: Search results are cached for performance
+
+### **Searchable Fields:**
+- `Nama Tentor` - Teacher/tutor name
+- `Nama Siswa` - Student name
+- `Hari dan Tanggal Les` - Lesson date
+- `Jam Kegiatan Les` - Lesson time
+- `Timestamp` - Entry timestamp
+
+### **Performance:**
+- **Caching**: Search results are cached with unique keys
+- **Server-Side**: All filtering happens server-side for better performance
+- **Optimized**: Efficient filtering algorithms for large datasets
+- **Timeout Handling**: 45-second timeout for search operations
 
 ## 🗄️ Data Structure
 

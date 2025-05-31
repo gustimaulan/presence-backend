@@ -9,18 +9,51 @@ class CacheService {
   }
 
   /**
-   * Generate cache key for data requests
+   * Generate cache key for data requests with search support
    * @param {string} year - Year filter (optional)
    * @param {number} page - Page number
    * @param {number} pageSize - Page size
+   * @param {Object} searchParams - Search parameters (optional)
    * @returns {string} - Cache key
    */
-  generateKey(year = null, page = 1, pageSize = 100) {
+  generateKey(year = null, page = 1, pageSize = 100, searchParams = {}) {
     const parts = ['data'];
+    
     if (year) parts.push(`year:${year}`);
     parts.push(`page:${page}`);
     parts.push(`size:${pageSize}`);
+    
+    // Add search parameters to cache key
+    if (searchParams.search) {
+      parts.push(`search:${encodeURIComponent(searchParams.search.toLowerCase().trim())}`);
+    }
+    if (searchParams.teacher) {
+      parts.push(`teacher:${encodeURIComponent(searchParams.teacher.toLowerCase().trim())}`);
+    }
+    if (searchParams.student) {
+      parts.push(`student:${encodeURIComponent(searchParams.student.toLowerCase().trim())}`);
+    }
+    if (searchParams.dateFrom) {
+      parts.push(`from:${searchParams.dateFrom}`);
+    }
+    if (searchParams.dateTo) {
+      parts.push(`to:${searchParams.dateTo}`);
+    }
+    
     return parts.join('|');
+  }
+
+  /**
+   * Generate cache key for simple search (backward compatibility)
+   * @param {string} year - Year filter (optional)
+   * @param {number} page - Page number
+   * @param {number} pageSize - Page size
+   * @param {string} search - Simple search term (optional)
+   * @returns {string} - Cache key
+   */
+  generateSearchKey(year = null, page = 1, pageSize = 100, search = null) {
+    const searchParams = search ? { search } : {};
+    return this.generateKey(year, page, pageSize, searchParams);
   }
 
   /**
