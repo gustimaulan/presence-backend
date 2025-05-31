@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  presence-api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_SHEET_RANGE=${GOOGLE_SHEET_RANGE:-Presensi!A1:E}
+      - CACHE_DURATION=${CACHE_DURATION:-300000}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://your-frontend-domain.pages.dev}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - presence-network
+
+networks:
+  presence-network:
+    driver: bridge 
