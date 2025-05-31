@@ -116,6 +116,11 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   }
 });
 
+// Increase server timeout for large datasets
+server.timeout = 60000; // 60 seconds
+server.keepAliveTimeout = 65000; // 65 seconds
+server.headersTimeout = 66000; // 66 seconds
+
 // Graceful shutdown handling
 const gracefulShutdown = (signal) => {
   console.log(`\n${signal} received. Starting graceful shutdown...`);

@@ -27,22 +27,54 @@ class GoogleSheetsService {
   }
 
   /**
+   * Retry logic for API calls
+   * @private
+   */
+  async _retryRequest(requestFn, maxRetries = 3, delay = 1000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await requestFn();
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw error;
+        }
+        
+        // Don't retry on client errors (4xx)
+        if (error.response && error.response.status >= 400 && error.response.status < 500) {
+          throw error;
+        }
+        
+        console.log(`Google Sheets API attempt ${attempt} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      }
+    }
+  }
+
+  /**
    * Fetch data from Google Sheets
    * @returns {Promise<Array>} - Processed data array
    */
   async fetchData() {
     this._init(); // Initialize when first used
     
-    try {
-      const url = `${this.baseURL}/${this.sheetId}/values/${this.range}`;
-      
+    const url = `${this.baseURL}/${this.sheetId}/values/${this.range}`;
+    
+    const requestFn = async () => {
       console.log('Fetching data from Google Sheets...');
-      const response = await axios.get(url, {
+      return await axios.get(url, {
         params: {
           key: this.apiKey
         },
-        timeout: 10000 // 10 second timeout
+        timeout: 30000, // Increased to 30 seconds
+        headers: {
+          'User-Agent': 'Presence-API/1.0.0'
+        }
       });
+    };
+
+    try {
+      const response = await this._retryRequest(requestFn);
 
       const processedData = processSheetData(response.data);
       const sortedData = sortByTimestamp(processedData);
@@ -64,11 +96,13 @@ class GoogleSheetsService {
           throw new Error(`Access denied to Google Sheets. Please check API key permissions: ${message}`);
         } else if (status === 404) {
           throw new Error(`Google Sheet not found. Please check GOOGLE_SHEET_ID: ${message}`);
+        } else if (status === 429) {
+          throw new Error(`Rate limit exceeded. Please try again later: ${message}`);
         } else {
           throw new Error(`Google Sheets API error (${status}): ${message}`);
         }
       } else if (error.code === 'ECONNABORTED') {
-        throw new Error('Request timeout while fetching data from Google Sheets');
+        throw new Error('Request timeout while fetching data from Google Sheets. The dataset might be too large.');
       } else if (error.code === 'ENOTFOUND') {
         throw new Error('Network error: Could not connect to Google Sheets API');
       } else {

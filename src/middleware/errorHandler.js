@@ -27,10 +27,13 @@ export const errorHandler = (err, req, res, next) => {
     message = 'Invalid data format';
   } else if (err.message.includes('Google Sheets')) {
     status = 503;
-    message = 'External service unavailable';
-  } else if (err.message.includes('timeout')) {
+    message = 'External service unavailable - Google Sheets API issue';
+  } else if (err.message.includes('timeout') || err.code === 'ETIMEDOUT') {
     status = 504;
-    message = 'Request timeout';
+    message = 'Request timeout - The operation took too long to complete';
+  } else if (err.message.includes('Rate limit')) {
+    status = 429;
+    message = 'Rate limit exceeded - Please try again later';
   }
 
   res.status(status).json({
@@ -49,8 +52,14 @@ export const errorHandler = (err, req, res, next) => {
 export const notFoundHandler = (req, res) => {
   res.status(404).json({
     error: true,
-    message: `Route ${req.method} ${req.url} not found`,
-    timestamp: new Date().toISOString()
+    message: `Route ${req.method} ${req.path} not found`,
+    timestamp: new Date().toISOString(),
+    availableEndpoints: {
+      data: '/api/data',
+      refresh: '/api/refresh',
+      status: '/api/status',
+      health: '/health'
+    }
   });
 };
 
@@ -62,25 +71,40 @@ export const notFoundHandler = (req, res) => {
  */
 export const requestLogger = (req, res, next) => {
   const start = Date.now();
+  const ip = req.ip || req.connection.remoteAddress;
   
   res.on('finish', () => {
     const duration = Date.now() - start;
-    const logData = {
-      method: req.method,
-      url: req.url,
-      status: res.statusCode,
-      duration: `${duration}ms`,
-      userAgent: req.get('User-Agent'),
-      ip: req.ip,
-      timestamp: new Date().toISOString()
-    };
+    const size = res.get('Content-Length') || 0;
     
-    if (res.statusCode >= 400) {
-      console.error('Request error:', logData);
-    } else {
-      console.log('Request completed:', logData);
+    console.log(`${req.method} ${req.url} - ${res.statusCode} - ${duration}ms - ${size} bytes - ${ip}`);
+    
+    // Log slow requests
+    if (duration > 5000) {
+      console.warn(`⚠️  Slow request detected: ${req.method} ${req.url} took ${duration}ms`);
     }
   });
   
   next();
+};
+
+/**
+ * Request timeout middleware for different endpoints
+ */
+export const requestTimeout = (timeoutMs = 45000) => {
+  return (req, res, next) => {
+    // Set timeout for this request
+    req.setTimeout(timeoutMs, () => {
+      if (!res.headersSent) {
+        res.status(504).json({
+          error: true,
+          message: 'Request timeout - The request took too long to process',
+          timestamp: new Date().toISOString(),
+          timeout: `${timeoutMs / 1000}s`
+        });
+      }
+    });
+    
+    next();
+  };
 }; 

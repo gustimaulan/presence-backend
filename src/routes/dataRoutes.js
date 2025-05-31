@@ -3,6 +3,7 @@ import GoogleSheetsService from '../services/googleSheetsService.js';
 import CacheService from '../services/cacheService.js';
 import { filterByYear, paginateData } from '../utils/dataProcessor.js';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, HTTP_STATUS } from '../config/constants.js';
+import { requestTimeout } from '../middleware/errorHandler.js';
 
 const router = express.Router();
 const googleSheetsService = new GoogleSheetsService();
@@ -17,7 +18,7 @@ setInterval(() => {
  * GET /api/data
  * Retrieve paginated attendance data with optional year filtering
  */
-router.get('/data', async (req, res) => {
+router.get('/data', requestTimeout(45000), async (req, res) => {
   try {
     // Parse and validate query parameters
     const year = req.query.year || null;
@@ -30,11 +31,18 @@ router.get('/data', async (req, res) => {
     // Check cache first
     const cachedResult = cacheService.get(cacheKey);
     if (cachedResult) {
+      console.log(`Cache hit for: ${cacheKey}`);
       return res.status(HTTP_STATUS.OK).json(cachedResult);
     }
 
+    console.log(`Cache miss for: ${cacheKey} - Fetching from Google Sheets...`);
+    
     // Fetch fresh data from Google Sheets
+    const startTime = Date.now();
     const allData = await googleSheetsService.fetchData();
+    const fetchTime = Date.now() - startTime;
+    
+    console.log(`Google Sheets fetch completed in ${fetchTime}ms`);
     
     // Apply year filter if specified
     const filteredData = year ? filterByYear(allData, year) : allData;
@@ -50,14 +58,15 @@ router.get('/data', async (req, res) => {
       filters: {
         year: year || 'all'
       },
-      fetchedAt: new Date().toISOString()
+      fetchedAt: new Date().toISOString(),
+      fetchTime: `${fetchTime}ms`
     };
 
     // Cache the result
     cacheService.set(cacheKey, response);
     
     // Log request info
-    console.log(`Data request: year=${year || 'all'}, page=${page}, pageSize=${pageSize}, results=${result.data.length}`);
+    console.log(`Data request completed: year=${year || 'all'}, page=${page}, pageSize=${pageSize}, results=${result.data.length}, fetchTime=${fetchTime}ms`);
     
     res.status(HTTP_STATUS.OK).json(response);
     
@@ -76,7 +85,7 @@ router.get('/data', async (req, res) => {
  * GET /api/refresh
  * Force refresh data from Google Sheets (bypasses cache)
  */
-router.get('/refresh', async (req, res) => {
+router.get('/refresh', requestTimeout(60000), async (req, res) => {
   try {
     console.log('Manual refresh requested');
     
@@ -84,16 +93,19 @@ router.get('/refresh', async (req, res) => {
     cacheService.clear();
     
     // Fetch fresh data from Google Sheets
+    const startTime = Date.now();
     const freshData = await googleSheetsService.fetchData();
+    const fetchTime = Date.now() - startTime;
     
     const response = {
       message: 'Data refreshed successfully',
       data: freshData,
       totalRecords: freshData.length,
-      refreshedAt: new Date().toISOString()
+      refreshedAt: new Date().toISOString(),
+      fetchTime: `${fetchTime}ms`
     };
     
-    console.log(`Manual refresh completed: ${freshData.length} records fetched`);
+    console.log(`Manual refresh completed: ${freshData.length} records fetched in ${fetchTime}ms`);
     
     res.status(HTTP_STATUS.OK).json(response);
     
