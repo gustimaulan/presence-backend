@@ -3,14 +3,16 @@ version: '3.8'
 services:
   presence-api:
     build: .
+    ports:
+      - "3000:3000"  # Explicit port mapping for local development
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3000
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GOOGLE_SHEET_RANGE=${GOOGLE_SHEET_RANGE}
-      - CACHE_DURATION=${CACHE_DURATION}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - GOOGLE_SHEET_RANGE=${GOOGLE_SHEET_RANGE:-Sheet1!A:E}
+      - CACHE_DURATION=${CACHE_DURATION:-300000}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
     env_file:
       - .env
     restart: unless-stopped
