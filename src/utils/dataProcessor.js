@@ -54,8 +54,12 @@ export const parseTimestamp = (timestamp) => {
     
     const time = timePart || '00:00:00';
     
+    // Ensure time components are zero-padded for valid ISO format
+    const timeParts = time.split(':');
+    const paddedTime = timeParts.map(part => part.padStart(2, '0')).join(':');
+    
     // Create ISO date string for parsing: YYYY-MM-DDTHH:mm:ss
-    const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}`;
+    const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${paddedTime}`;
     const date = new Date(isoString);
     
     // Return epoch time if invalid date
