@@ -1,18 +1,11 @@
 import express from 'express';
 import GoogleSheetsService from '../services/googleSheetsService.js';
-import CacheService from '../services/cacheService.js';
 import { filterByYear, paginateData, searchData, advancedSearch } from '../utils/dataProcessor.js';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, HTTP_STATUS } from '../config/constants.js';
 import { requestTimeout } from '../middleware/errorHandler.js';
 
 const router = express.Router();
 const googleSheetsService = new GoogleSheetsService();
-const cacheService = new CacheService();
-
-// Cleanup expired cache entries every 10 minutes
-setInterval(() => {
-  cacheService.cleanup();
-}, 10 * 60 * 1000);
 
 /**
  * GET /api/data
@@ -51,19 +44,9 @@ router.get('/data', requestTimeout(45000), async (req, res) => {
       }
     });
 
-    // Generate cache key including search parameters
-    const cacheKey = cacheService.generateKey(year, page, pageSize, searchParams);
+    console.log('Fetching data from Google Sheets...');
     
-    // Check cache first
-    const cachedResult = cacheService.get(cacheKey);
-    if (cachedResult) {
-      console.log(`Cache hit for: ${cacheKey}`);
-      return res.status(HTTP_STATUS.OK).json(cachedResult);
-    }
-
-    console.log(`Cache miss for: ${cacheKey} - Fetching from Google Sheets...`);
-    
-    // Fetch fresh data from Google Sheets
+    // Fetch data from Google Sheets
     const startTime = Date.now();
     const allData = await googleSheetsService.fetchData();
     const fetchTime = Date.now() - startTime;
@@ -101,7 +84,6 @@ router.get('/data', requestTimeout(45000), async (req, res) => {
     
     // Prepare response
     const response = {
-      cached: false,
       data: result.data,
       pagination: result.pagination,
       filters: {
@@ -113,9 +95,6 @@ router.get('/data', requestTimeout(45000), async (req, res) => {
       totalRecordsBeforeFilter: allData.length,
       totalRecordsAfterFilter: filteredData.length
     };
-
-    // Cache the result
-    cacheService.set(cacheKey, response);
     
     // Log request info
     const searchInfo = hasSearchParams ? JSON.stringify(searchParams) : 'none';
@@ -153,19 +132,9 @@ router.get('/search', requestTimeout(45000), async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(req.query.pageSize) || DEFAULT_PAGE_SIZE));
     
-    // Use simple search key for this endpoint
-    const cacheKey = cacheService.generateSearchKey(null, page, pageSize, searchTerm);
+    console.log(`Searching for: ${searchTerm} - Fetching from Google Sheets...`);
     
-    // Check cache first
-    const cachedResult = cacheService.get(cacheKey);
-    if (cachedResult) {
-      console.log(`Search cache hit for: ${searchTerm}`);
-      return res.status(HTTP_STATUS.OK).json(cachedResult);
-    }
-
-    console.log(`Search cache miss for: ${searchTerm} - Fetching from Google Sheets...`);
-    
-    // Fetch fresh data from Google Sheets
+    // Fetch data from Google Sheets
     const startTime = Date.now();
     const allData = await googleSheetsService.fetchData();
     const fetchTime = Date.now() - startTime;
@@ -180,7 +149,6 @@ router.get('/search', requestTimeout(45000), async (req, res) => {
     
     // Prepare response
     const response = {
-      cached: false,
       data: result.data,
       pagination: result.pagination,
       search: {
@@ -191,9 +159,6 @@ router.get('/search', requestTimeout(45000), async (req, res) => {
       fetchedAt: new Date().toISOString(),
       fetchTime: `${fetchTime}ms`
     };
-
-    // Cache the result
-    cacheService.set(cacheKey, response);
     
     console.log(`Search completed: term="${searchTerm}", matches=${searchResults.length}, page=${page}, results=${result.data.length}, searchTime=${searchTime}ms`);
     
@@ -212,14 +177,11 @@ router.get('/search', requestTimeout(45000), async (req, res) => {
 
 /**
  * GET /api/refresh
- * Force refresh data from Google Sheets (bypasses cache)
+ * Force refresh data from Google Sheets
  */
 router.get('/refresh', requestTimeout(60000), async (req, res) => {
   try {
     console.log('Manual refresh requested');
-    
-    // Clear all cache entries
-    cacheService.clear();
     
     // Fetch fresh data from Google Sheets
     const startTime = Date.now();
@@ -256,7 +218,6 @@ router.get('/refresh', requestTimeout(60000), async (req, res) => {
 router.get('/status', (req, res) => {
   try {
     const googleSheetsStatus = googleSheetsService.getStatus();
-    const cacheStats = cacheService.getStats();
     
     const response = {
       api: {
@@ -266,7 +227,6 @@ router.get('/status', (req, res) => {
         timestamp: new Date().toISOString()
       },
       googleSheets: googleSheetsStatus,
-      cache: cacheStats,
       environment: {
         nodeVersion: process.version,
         platform: process.platform,
@@ -287,28 +247,4 @@ router.get('/status', (req, res) => {
   }
 });
 
-/**
- * GET /api/cache/clear
- * Clear all cache entries (admin endpoint)
- */
-router.post('/cache/clear', (req, res) => {
-  try {
-    cacheService.clear();
-    
-    res.status(HTTP_STATUS.OK).json({
-      message: 'Cache cleared successfully',
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('Error clearing cache:', error.message);
-    
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: true,
-      message: 'Failed to clear cache',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-export default router; 
+export default router;
