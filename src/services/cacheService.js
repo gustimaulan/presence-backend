@@ -25,13 +25,13 @@ class CacheService {
     
     // Add search parameters to cache key
     if (searchParams.search) {
-      parts.push(`search:${encodeURIComponent(searchParams.search.toLowerCase().trim())}`);
+      parts.push(`s:${encodeURIComponent(searchParams.search.toLowerCase().trim())}`);
     }
     if (searchParams.teacher) {
-      parts.push(`teacher:${encodeURIComponent(searchParams.teacher.toLowerCase().trim())}`);
+      parts.push(`t:${encodeURIComponent(searchParams.teacher.toLowerCase().trim())}`);
     }
     if (searchParams.student) {
-      parts.push(`student:${encodeURIComponent(searchParams.student.toLowerCase().trim())}`);
+      parts.push(`st:${encodeURIComponent(searchParams.student.toLowerCase().trim())}`);
     }
     if (searchParams.dateFrom) {
       parts.push(`from:${searchParams.dateFrom}`);
@@ -77,10 +77,7 @@ class CacheService {
     }
     
     console.log(`Cache hit for key: ${key}`);
-    return {
-      ...cached.data,
-      cached: true
-    };
+    return { ...cached.data, cached: true }; // Add cached flag on retrieval
   }
 
   /**
@@ -92,14 +89,8 @@ class CacheService {
   set(key, data) {
     const expiresAt = Date.now() + this.cacheDuration;
     
-    this.cache.set(key, {
-      data: {
-        ...data,
-        cached: false
-      },
-      expiresAt,
-      createdAt: Date.now()
-    });
+    // Store the data object directly without modification
+    this.cache.set(key, { data, expiresAt, createdAt: Date.now() });
     
     console.log(`Data cached with key: ${key}, expires at: ${new Date(expiresAt).toISOString()}`);
   }

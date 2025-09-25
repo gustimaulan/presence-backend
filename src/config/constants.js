@@ -6,7 +6,7 @@ export const REQUIRED_FIELDS = [
   "Timestamp"              // Entry timestamp (datetime in Asia/Jakarta timezone)
 ];
 
-export const DEFAULT_PAGE_SIZE = 100;
+export const DEFAULT_PAGE_SIZE = 15;
 export const MAX_PAGE_SIZE = 1000;
 export const DEFAULT_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 

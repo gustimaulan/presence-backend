@@ -5,13 +5,16 @@ A RESTful API backend for fetching and serving presence/attendance data from Goo
 ## 🚀 Features
 
 - **Google Sheets Integration**: Direct integration with Google Sheets API v4
-- **Year-based Filtering**: Efficient server-side filtering by year
+- **Year-based Filtering**: Efficient server-side filtering by year (uses different sheets for each year, e.g., `2025!A:E`)
 - **Intelligent Caching**: 5-minute TTL in-memory caching system
 - **Pagination Support**: Configurable page sizes with metadata
 - **Data Validation**: Comprehensive validation and processing
 - **Error Handling**: Robust error handling with detailed logging
 - **Security**: Helmet.js security headers and CORS configuration
-- **Performance**: Compression and optimized data processing
+- **Performance**:
+  - **Batch Fetching**: Uses `batchGet` to fetch thousands of rows in a single API call.
+  - **Compression**: Gzip compression for smaller response payloads.
+  - **Optimized Data Processing**: Efficient server-side filtering and sorting.
 
 ## 📋 Requirements
 
@@ -251,7 +254,7 @@ Clear all cache entries (admin endpoint).
 - **Field-Specific Search**: Target specific fields (teacher, student)
 - **Date Range Filtering**: Filter by date ranges
 - **Combined Filters**: Mix multiple search criteria
-- **Case-Insensitive**: All searches are case-insensitive
+- **Case-Insensitive**: All text-based searches are case-insensitive
 - **Partial Matching**: Supports partial text matches
 - **Cached Results**: Search results are cached for performance
 
@@ -260,22 +263,22 @@ Clear all cache entries (admin endpoint).
 - `Nama Siswa` - Student name
 - `Hari dan Tanggal Les` - Lesson date
 - `Jam Kegiatan Les` - Lesson time
-- `Timestamp` - Entry timestamp
+- `Timestamp` - Entry submission timestamp
 
 ### **Performance:**
 - **Caching**: Search results are cached with unique keys
 - **Server-Side**: All filtering happens server-side for better performance
-- **Optimized**: Efficient filtering algorithms for large datasets
+- **Optimized**: Efficient filtering and batch data fetching from Google Sheets
 - **Timeout Handling**: 45-second timeout for search operations
 
 ## 🗄️ Data Structure
 
 ### Required Google Sheets Columns:
-- **Timestamp**: Entry timestamp (DD/MM/YYYY HH:mm:ss format)
+- **Timestamp**: Entry submission timestamp (format: `DD/MM/YYYY HH:mm:ss`)
 - **Nama Tentor**: Teacher/tutor name
 - **Nama Siswa**: Student name  
-- **Hari dan Tanggal Les**: Lesson date (DD/MM/YYYY format)
-- **Jam Kegiatan Les**: Lesson time (HH:mm format)
+- **Hari dan Tanggal Les**: Lesson date (format: `DD/MM/YYYY`)
+- **Jam Kegiatan Les**: Lesson time (format: `HH:mm`)
 
 ### Data Processing:
 1. **Fetches** raw data from Google Sheets API
@@ -283,7 +286,7 @@ Clear all cache entries (admin endpoint).
 3. **Sorts** by timestamp (newest first)
 4. **Filters** by year if specified
 5. **Paginates** results
-6. **Caches** for 5 minutes
+6. **Caches** the final processed response for 5 minutes
 
 ## ⚡ Caching System
 

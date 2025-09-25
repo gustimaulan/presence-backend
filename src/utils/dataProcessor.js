@@ -132,10 +132,11 @@ export const processSheetData = (response) => {
 export const filterByYear = (data, year) => {
   if (!year) return data;
   
-  return data.filter(item => {
+  const filtered = data.filter(item => {
     const itemYear = extractYear(item['Hari dan Tanggal Les']);
     return itemYear === year;
   });
+  return filtered;
 };
 
 /**
@@ -237,14 +238,14 @@ export const advancedSearch = (data, searchCriteria) => {
 
   // Date range filter
   if (searchCriteria.dateFrom || searchCriteria.dateTo) {
+    const fromDate = searchCriteria.dateFrom ? new Date(searchCriteria.dateFrom) : new Date('1900-01-01');
+    const toDate = searchCriteria.dateTo ? new Date(searchCriteria.dateTo) : new Date('2100-12-31');
+    
     filteredData = filteredData.filter(item => {
       const itemDate = parseTimestamp(item['Timestamp'] || '');
-      const fromDate = searchCriteria.dateFrom ? new Date(searchCriteria.dateFrom) : new Date('1900-01-01');
-      const toDate = searchCriteria.dateTo ? new Date(searchCriteria.dateTo) : new Date('2100-12-31');
-      
       return itemDate >= fromDate && itemDate <= toDate;
     });
   }
 
   return filteredData;
-}; 
+};
