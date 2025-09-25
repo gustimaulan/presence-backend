@@ -220,18 +220,23 @@ export const advancedSearch = (data, searchCriteria) => {
     filteredData = searchData(filteredData, searchCriteria.search);
   }
 
-  // Teacher name filter
-  if (searchCriteria.teacher) {
+  // Handle teacher and student search.
+  // If only 'teacher' is provided, search in both teacher and student fields.
+  // If 'student' is also provided, treat them as separate AND conditions.
+  if (searchCriteria.teacher && !searchCriteria.student) {
+    const term = searchCriteria.teacher.toLowerCase().trim();
+    filteredData = filteredData.filter(item =>
+      (item['Nama Tentor'] || '').toLowerCase().includes(term) ||
+      (item['Nama Siswa'] || '').toLowerCase().includes(term)
+    );
+  } else if (searchCriteria.teacher) {
     const teacherTerm = searchCriteria.teacher.toLowerCase().trim();
-    filteredData = filteredData.filter(item => 
+    filteredData = filteredData.filter(item =>
       (item['Nama Tentor'] || '').toLowerCase().includes(teacherTerm)
     );
-  }
-
-  // Student name filter
-  if (searchCriteria.student) {
+  } else if (searchCriteria.student) {
     const studentTerm = searchCriteria.student.toLowerCase().trim();
-    filteredData = filteredData.filter(item => 
+    filteredData = filteredData.filter(item =>
       (item['Nama Siswa'] || '').toLowerCase().includes(studentTerm)
     );
   }

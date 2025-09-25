@@ -239,6 +239,11 @@ Simple health check endpoint.
 ### 🧹 POST `/api/cache/clear`
 Clear all cache entries (admin endpoint).
 
+**Details:**
+- This is a protected or administrative endpoint.
+- It requires a `POST` request to prevent accidental clearing via browser URL.
+- No request body is needed.
+
 **Response:**
 ```json
 {
@@ -358,6 +363,9 @@ curl http://localhost:3000/api/refresh
 
 # Get status
 curl http://localhost:3000/api/status
+
+# Clear the cache (requires POST method)
+curl -X POST http://localhost:3000/api/cache/clear
 ```
 
 ### Using your frontend:
