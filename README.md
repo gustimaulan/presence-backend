@@ -19,6 +19,7 @@ A RESTful API backend for fetching and serving presence/attendance data from Goo
 ## 📋 Requirements
 
 - Node.js 18.0.0 or higher
+- Redis server
 - Google Sheets API v4 access
 - Google API Key with Sheets API permissions
 
@@ -55,6 +56,9 @@ A RESTful API backend for fetching and serving presence/attendance data from Goo
 
    # CORS Configuration (optional)
    ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
+   # Redis Configuration (optional)
+   REDIS_URL=redis://localhost:6379
    ```
 
 5. **Start the server:**
@@ -295,10 +299,9 @@ Clear all cache entries (admin endpoint).
 
 ## ⚡ Caching System
 
-- **Type**: In-memory caching with TTL
-- **Duration**: 5 minutes (configurable)
+- **Type**: Redis-based caching with TTL
+- **Duration**: 5 minutes (configurable via `CACHE_DURATION`)
 - **Key Strategy**: `data|year:2025|page:1|size:100`
-- **Auto-cleanup**: Expired entries cleaned every 10 minutes
 - **Cache Status**: Indicated in API responses
 
 ## 🔧 Configuration

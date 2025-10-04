@@ -9,6 +9,82 @@ const router = express.Router();
 const googleSheetsService = new GoogleSheetsService();
 const cache = new CacheService();
 
+async function getData(year, page, pageSize, searchParams) {
+  // Generate a unique cache key for this specific request (filters + pagination)
+  const cacheKey = cache.generateKey(year, page, pageSize, searchParams);
+  const cachedResult = await cache.get(cacheKey);
+
+  if (cachedResult) {
+    console.log(`Full response cache hit for key: ${cacheKey}`);
+    return cachedResult;
+  }
+
+  console.log(`Cache miss for key: ${cacheKey}. Fetching data...`);
+
+  // Fetch raw data dynamically based on pagination.
+  const startTime = Date.now();
+  const allData = await googleSheetsService.fetchData({
+    year: year,
+    page: page,
+    pageSize: pageSize
+  });
+  const fetchTime = Date.now() - startTime;
+
+  console.log(`Data fetch/load completed in ${fetchTime}ms. Total records: ${allData.length}`);
+
+  // Apply filters in order: year -> search -> pagination
+  let filteredData = allData;
+  
+  // Apply year filter if specified
+  if (year) {
+    filteredData = filterByYear(filteredData, year);
+    console.log(`Year filter applied: ${filteredData.length} records after filtering by year ${year}`);
+  }
+  
+  // Apply search filters
+  const hasSearchParams = Object.keys(searchParams).length > 0;
+  if (hasSearchParams) {
+    const searchStartTime = Date.now();
+    
+    if (searchParams.search && Object.keys(searchParams).length === 1) {
+      // Simple search
+      filteredData = searchData(filteredData, searchParams.search);
+    } else {
+      // Advanced search with multiple criteria
+      filteredData = advancedSearch(filteredData, searchParams);
+    }
+    
+    const searchTime = Date.now() - searchStartTime;
+    console.log(`Search applied in ${searchTime}ms: ${filteredData.length} records after search`);
+  }
+  
+  // Apply pagination
+  const result = paginateData(filteredData, page, pageSize);
+  
+  // Prepare response
+  const response = {
+    data: result.data,
+    pagination: result.pagination,
+    filters: {
+      year: year || 'all',
+      ...(hasSearchParams && { search: searchParams })
+    },
+    fetchedAt: new Date().toISOString(),
+    fetchTime: `${fetchTime}ms`,
+    totalRecordsBeforeFilter: allData.length,
+    totalRecordsAfterFilter: filteredData.length
+  };
+  
+  // Cache the final, processed response (without the 'cached' flag)
+  cache.set(cacheKey, response);
+
+  // Log request info
+  const searchInfo = hasSearchParams ? JSON.stringify(searchParams) : 'none';
+  console.log(`Data request completed: year=${year || 'all'}, search=${searchInfo}, page=${page}, pageSize=${pageSize}, results=${result.data.length}, fetchTime=${fetchTime}ms`);
+
+  return { ...response, cached: false };
+}
+
 /**
  * GET /api/data
  * Retrieve paginated attendance data with optional filtering and search
@@ -46,81 +122,8 @@ router.get('/data', requestTimeout(60000), async (req, res) => { // Increased ti
       }
     });
 
-    // Generate a unique cache key for this specific request (filters + pagination)
-    const cacheKey = cache.generateKey(year, page, pageSize, searchParams);
-    const cachedResult = cache.get(cacheKey);
-
-    if (cachedResult) {
-      console.log(`Full response cache hit for key: ${cacheKey}`);
-      return res.status(HTTP_STATUS.OK).json(cachedResult);
-    }
-
-    console.log(`Cache miss for key: ${cacheKey}. Fetching data...`);
-
-    // Fetch raw data dynamically based on pagination.
-    const startTime = Date.now();
-    const allData = await googleSheetsService.fetchData({
-      year: year,
-      page: page,
-      pageSize: pageSize
-    });
-    const fetchTime = Date.now() - startTime;
-
-    console.log(`Data fetch/load completed in ${fetchTime}ms. Total records: ${allData.length}`);
-
-    // Apply filters in order: year -> search -> pagination
-    let filteredData = allData;
-    
-    // Apply year filter if specified
-    if (year) {
-      filteredData = filterByYear(filteredData, year);
-      console.log(`Year filter applied: ${filteredData.length} records after filtering by year ${year}`);
-    }
-    
-    // Apply search filters
-    const hasSearchParams = Object.keys(searchParams).length > 0;
-    if (hasSearchParams) {
-      const searchStartTime = Date.now();
-      
-      if (searchParams.search && Object.keys(searchParams).length === 1) {
-        // Simple search
-        filteredData = searchData(filteredData, searchParams.search);
-      } else {
-        // Advanced search with multiple criteria
-        filteredData = advancedSearch(filteredData, searchParams);
-      }
-      
-      const searchTime = Date.now() - searchStartTime;
-      console.log(`Search applied in ${searchTime}ms: ${filteredData.length} records after search`);
-    }
-    
-    // Apply pagination
-    const result = paginateData(filteredData, page, pageSize);
-    
-    // Prepare response
-    const response = {
-      data: result.data,
-      pagination: result.pagination,
-      filters: {
-        year: year || 'all',
-        ...(hasSearchParams && { search: searchParams })
-      },
-      fetchedAt: new Date().toISOString(),
-      fetchTime: `${fetchTime}ms`,
-      totalRecordsBeforeFilter: allData.length,
-      totalRecordsAfterFilter: filteredData.length
-    };
-    
-    // Cache the final, processed response (without the 'cached' flag)
-    cache.set(cacheKey, response);
-
-    // Log request info
-    const searchInfo = hasSearchParams ? JSON.stringify(searchParams) : 'none';
-    console.log(`Data request completed: year=${year || 'all'}, search=${searchInfo}, page=${page}, pageSize=${pageSize}, results=${result.data.length}, fetchTime=${fetchTime}ms`);
-
-    // Send the response to the client with cached: false
-    // This ensures the client knows this is a fresh response
-    res.status(HTTP_STATUS.OK).json({ ...response, cached: false });
+    const result = await getData(year, page, pageSize, searchParams);
+    res.status(HTTP_STATUS.OK).json(result);
     
   } catch (error) {
     console.error('Error in /api/data:', error.message);
@@ -160,56 +163,8 @@ router.post('/data/query', requestTimeout(60000), async (req, res) => {
     const validatedPage = Math.max(1, parseInt(page) || 1);
     const validatedPageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(pageSize) || DEFAULT_PAGE_SIZE));
 
-    // Generate a unique cache key for this specific request
-    const cacheKey = cache.generateKey(year, validatedPage, validatedPageSize, searchParams);
-    const cachedResult = cache.get(cacheKey);
-
-    if (cachedResult) {
-      console.log(`Full response cache hit for key (POST): ${cacheKey}`);
-      return res.status(HTTP_STATUS.OK).json(cachedResult);
-    }
-
-    console.log(`Cache miss for key (POST): ${cacheKey}. Fetching data...`);
-
-    // Fetch raw data
-    const startTime = Date.now();
-    const allData = await googleSheetsService.fetchData({
-      year: year,
-      page: validatedPage,
-      pageSize: validatedPageSize
-    });
-    const fetchTime = Date.now() - startTime;
-
-    console.log(`Data fetch/load completed in ${fetchTime}ms. Total records: ${allData.length}`);
-
-    // Apply filters
-    let filteredData = allData;
-    if (year) {
-      filteredData = filterByYear(filteredData, year);
-    }
-    if (Object.keys(searchParams).length > 0) {
-      filteredData = advancedSearch(filteredData, searchParams);
-    }
-
-    // Apply pagination
-    const result = paginateData(filteredData, validatedPage, validatedPageSize);
-
-    // Prepare response
-    const response = {
-      data: result.data,
-      pagination: result.pagination,
-      filters: { year: year || 'all', search: searchParams },
-      fetchedAt: new Date().toISOString(),
-      fetchTime: `${fetchTime}ms`,
-      totalRecordsBeforeFilter: allData.length,
-      totalRecordsAfterFilter: filteredData.length
-    };
-
-    // Cache the final response
-    cache.set(cacheKey, response);
-
-    // Send response to the client
-    res.status(HTTP_STATUS.OK).json({ ...response, cached: false });
+    const result = await getData(year, validatedPage, validatedPageSize, searchParams);
+    res.status(HTTP_STATUS.OK).json(result);
   } catch (error) {
     console.error('Error in /api/data/query:', error.message);
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: true, message: error.message, timestamp: new Date().toISOString() });
@@ -237,7 +192,7 @@ router.get('/search', requestTimeout(45000), async (req, res) => {
     
     // Use the same cache key generation for search
     const cacheKey = cache.generateSearchKey(null, page, pageSize, searchTerm);
-    const cachedResult = cache.get(cacheKey);
+    const cachedResult = await cache.get(cacheKey);
 
     if (cachedResult) {
       console.log(`Search response cache hit for key: ${cacheKey}`);
@@ -303,22 +258,14 @@ router.get('/refresh', requestTimeout(60000), async (req, res) => {
   try {
     console.log('Manual refresh requested');
     
-    // Clear the main response cache
-    cache.clear();
-    const startTime = Date.now();
-    // Fetch only the first page of data for the refresh response.
-    const freshData = await googleSheetsService.fetchData(null); // Fetch all data
-    const fetchTime = Date.now() - startTime;
+    await cache.clear();
     
     const response = {
-      message: 'Data refreshed successfully',
-      data: freshData,
-      totalRecords: freshData.length,
+      message: 'Cache cleared successfully. Data will be refreshed on the next request.',
       refreshedAt: new Date().toISOString(),
-      fetchTime: `${fetchTime}ms`
     };
     
-    console.log(`Manual refresh completed: ${freshData.length} records fetched in ${fetchTime}ms`);
+    console.log('Manual refresh completed: cache cleared.');
     
     res.status(HTTP_STATUS.OK).json(response);
     
@@ -385,5 +332,15 @@ router.post('/cache/clear', (req, res) => {
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: true, message: 'Failed to clear cache' });
   }
 });
+
+export async function warmupCacheForYear(year = 2025) {
+  try {
+    console.log(`Warming up cache for year: ${year}`);
+    await getData(year, 1, 200, {});
+    console.log(`Cache warmed up for year: ${year}`);
+  } catch (error) {
+    console.error(`Error warming up cache for year ${year}:`, error.message);
+  }
+}
 
 export default router;

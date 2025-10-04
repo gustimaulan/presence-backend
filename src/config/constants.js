@@ -21,4 +21,7 @@ export const HTTP_STATUS = {
   INTERNAL_SERVER_ERROR: 500
 };
 
-export const TIMEZONE = 'Asia/Jakarta'; 
+export const TIMEZONE = 'Asia/Jakarta';
+
+// Redis
+export const REDIS_URL = process.env.REDIS_URL || 'redis://default:admin123@5.161.185.120:6379';

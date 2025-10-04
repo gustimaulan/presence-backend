@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import dataRoutes from './src/routes/dataRoutes.js';
+import dataRoutes, { warmupCacheForYear } from './src/routes/dataRoutes.js';
 import { errorHandler, notFoundHandler, requestLogger } from './src/middleware/errorHandler.js';
 
 // Load environment variables
@@ -111,6 +111,8 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   
   if (hasSheetId && hasApiKey) {
     console.log(`✅ Google Sheets API configured`);
+    // Warm up the cache for the year 2025
+    warmupCacheForYear('2025');
   } else {
     console.log(`⚠️  Google Sheets API not configured. Please set GOOGLE_SHEET_ID and GOOGLE_API_KEY environment variables.`);
   }
