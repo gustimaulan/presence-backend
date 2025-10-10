@@ -324,16 +324,17 @@ router.get('/status', (req, res) => {
  */
 router.get('/tutors', requestTimeout(30000), async (req, res) => {
   try {
-    const cacheKey = 'unique_tutor_names';
+    const currentYear = new Date().getFullYear().toString();
+    const cacheKey = `unique_tutor_names_${currentYear}`;
     const cachedResult = await cache.get(cacheKey);
 
     if (cachedResult) {
-      console.log(`Cache hit for unique tutor names: ${cacheKey}`);
+      console.log(`Cache hit for unique tutor names for ${currentYear}: ${cacheKey}`);
       return res.status(HTTP_STATUS.OK).json({ names: cachedResult, cached: true });
     }
 
-    console.log(`Cache miss for unique tutor names. Fetching all data...`);
-    const allData = await googleSheetsService.fetchData({ year: null, page: 1, pageSize: MAX_PAGE_SIZE });
+    console.log(`Cache miss for unique tutor names for ${currentYear}. Fetching all data for ${currentYear}...`);
+    const allData = await googleSheetsService.fetchData({ year: currentYear, fetchAll: true });
     const uniqueNames = getUniqueTutorNames(allData);
     await cache.set(cacheKey, uniqueNames, 3600); // Cache for 1 hour
 

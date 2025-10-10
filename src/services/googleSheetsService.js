@@ -109,18 +109,25 @@ class GoogleSheetsService {
   async fetchData(options = {}) {
     this._init(); // Initialize when first used
 
-    const { year = null, page = 1, pageSize = 100 } = options;
+    const { year = null, page = 1, pageSize = 100, fetchAll = false } = options;
 
     // Determine the range to fetch from based on the year parameter
     const currentRange = year ? `${year}!A:E` : this.defaultRange; // Assuming A:E is the column range for all sheets
     console.log(`Fetching data from range: ${currentRange}`);
 
-    // Calculate how many records we need to fetch from the bottom.
-    const recordsToFetch = page * pageSize;
-    // Add a buffer (e.g., 50% more, with a minimum) to account for invalid/filtered rows.
-    const buffer = Math.max(recordsToFetch * 0.5, 200);
-    const rowsToFetch = Math.ceil(recordsToFetch + buffer);
-    console.log(`Calculated rows to fetch: ${rowsToFetch}`);
+    let rowsToFetch;
+    if (fetchAll) {
+      // If fetchAll is true, we want to fetch all rows for the specified year.
+      // We'll set rowsToFetch after getting totalRows.
+      rowsToFetch = -1; // Placeholder, will be updated
+    } else {
+      // Calculate how many records we need to fetch from the bottom.
+      const recordsToFetch = page * pageSize;
+      // Add a buffer (e.g., 50% more, with a minimum) to account for invalid/filtered rows.
+      const buffer = Math.max(recordsToFetch * 0.5, 200);
+      rowsToFetch = Math.ceil(recordsToFetch + buffer);
+    }
+    console.log(`Calculated rows to fetch: ${rowsToFetch === -1 ? 'all' : rowsToFetch}`);
 
     try {
       let headers;
@@ -133,6 +140,9 @@ class GoogleSheetsService {
           return [];
         }
         totalRows = await this._getTotalRows(currentRange);
+        if (fetchAll) {
+          rowsToFetch = totalRows - 1; // Fetch all data rows (excluding header)
+        }
       } catch (error) {
         console.error('Failed during initial sheet setup (fetching headers or row count).', error.message);
         // Re-throw the error to be caught by the main catch block which has better reporting
