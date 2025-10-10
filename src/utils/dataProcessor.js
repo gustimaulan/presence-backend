@@ -254,3 +254,33 @@ export const advancedSearch = (data, searchCriteria) => {
 
   return filteredData;
 };
+
+/**
+ * Extracts unique tentor (teacher) names from the data.
+ * @param {Array} data - Array of data objects.
+ * @returns {Array<string>} - Sorted array of unique tutor names.
+ */
+export const getUniqueTutorNames = (data) => {
+  const tutorNames = new Set();
+  data.forEach(item => {
+    if (item['Nama Tentor']) {
+      tutorNames.add(item['Nama Tentor'].trim());
+    }
+  });
+  return Array.from(tutorNames).sort();
+};
+
+/**
+ * Extracts unique siswa (student) names from the data.
+ * @param {Array} data - Array of data objects.
+ * @returns {Array<string>} - Sorted array of unique siswa names.
+ */
+export const getUniqueStudentNames = (data) => {
+  const studentNames = new Set();
+  data.forEach(item => {
+    if (item['Nama Siswa']) {
+      studentNames.add(item['Nama Siswa'].trim());
+    }
+  });
+  return Array.from(studentNames).sort();
+};

@@ -1,6 +1,6 @@
 {
   "name": "presence-backend-api",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "RESTful API backend for presence/attendance data from Google Sheets",
   "main": "server.js",
   "type": "module",

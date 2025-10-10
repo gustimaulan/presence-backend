@@ -1,7 +1,7 @@
 import express from 'express';
 import GoogleSheetsService from '../services/googleSheetsService.js';
 import CacheService from '../services/cacheService.js';
-import { filterByYear, paginateData, searchData, advancedSearch } from '../utils/dataProcessor.js';
+import { filterByYear, paginateData, searchData, advancedSearch, getUniqueTutorNames, getUniqueStudentNames } from '../utils/dataProcessor.js';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, HTTP_STATUS } from '../config/constants.js';
 import { requestTimeout } from '../middleware/errorHandler.js';
 
@@ -313,6 +313,66 @@ router.get('/status', (req, res) => {
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       error: true,
       message: 'Failed to get status information',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/tutors
+ * Retrieve a list of unique tutor names.
+ */
+router.get('/tutors', requestTimeout(30000), async (req, res) => {
+  try {
+    const cacheKey = 'unique_tutor_names';
+    const cachedResult = await cache.get(cacheKey);
+
+    if (cachedResult) {
+      console.log(`Cache hit for unique tutor names: ${cacheKey}`);
+      return res.status(HTTP_STATUS.OK).json({ names: cachedResult, cached: true });
+    }
+
+    console.log(`Cache miss for unique tutor names. Fetching all data...`);
+    const allData = await googleSheetsService.fetchData({ year: null, page: 1, pageSize: MAX_PAGE_SIZE });
+    const uniqueNames = getUniqueTutorNames(allData);
+    await cache.set(cacheKey, uniqueNames, 3600); // Cache for 1 hour
+
+    res.status(HTTP_STATUS.OK).json({ names: uniqueNames, cached: false });
+  } catch (error) {
+    console.error('Error in /api/tutors:', error.message);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      error: true,
+      message: error.message || 'Failed to retrieve tutor names',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/students
+ * Retrieve a list of unique student names.
+ */
+router.get('/students', requestTimeout(30000), async (req, res) => {
+  try {
+    const cacheKey = 'unique_student_names';
+    const cachedResult = await cache.get(cacheKey);
+
+    if (cachedResult) {
+      console.log(`Cache hit for unique student names: ${cacheKey}`);
+      return res.status(HTTP_STATUS.OK).json({ names: cachedResult, cached: true });
+    }
+
+    console.log(`Cache miss for unique student names. Fetching all data...`);
+    const allData = await googleSheetsService.fetchData({ year: null, page: 1, pageSize: MAX_PAGE_SIZE });
+    const uniqueNames = getUniqueStudentNames(allData);
+    await cache.set(cacheKey, uniqueNames, 3600); // Cache for 1 hour
+
+    res.status(HTTP_STATUS.OK).json({ names: uniqueNames, cached: false });
+  } catch (error) {
+    console.error('Error in /api/students:', error.message);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      error: true,
+      message: error.message || 'Failed to retrieve student names',
       timestamp: new Date().toISOString()
     });
   }
