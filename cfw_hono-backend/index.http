@@ -1,17 +1,4 @@
 ###
-POST https://cfw_hono-backend.gmaulan47.workers.dev/api/data/query
-Content-Type: application/json
-
-{
-  "year": "2025",
-  "page": 1,
-  "pageSize": 15,
-  "search": {
-    "teacher": "rahma n"
-  }
-}
-
-###
 GET http://localhost:8787/api/refresh
 Content-Type: application/json
 
