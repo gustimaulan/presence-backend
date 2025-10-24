@@ -1,0 +1,36 @@
+
+name = "cfw_hono-backend"
+main = "src/index.ts"
+compatibility_date = "2025-10-24"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+GOOGLE_SHEET_ID = "1ThSvaWOb-U6OKWc-9nBqccSDSmNSToD5kotqdGJYmrA"
+GOOGLE_API_KEY = "AIzaSyDMLnGgA2f4s5EnS-cqBFiJXUixeiawZ4c"
+GOOGLE_SHEET_RANGE = "Presensi!A:E"
+CACHE_DURATION = "300000"
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:3000,https://presensi.sigmath.net,https://all-time.sigmath.net"
+VITE_API_BASE_URL = "http://localhost:3000/api/v1/presensi,https://presensi.sigmath.net/api/v1/presensi"
+GOOGLE_SHEET_API_URL = "https://sheets.googleapis.com/v4/spreadsheets/1ThSvaWOb-U6OKWc-9nBqccSDSmNSToD5kotqdGJYmrA/values/Presensi!A:E?key=AIzaSyDMLnGgA2f4s5EnS-cqBFiJXUixeiawZ4c"
+REDIS_URL = "redis://default:admin123@5.161.185.120:6379"
+
+[[kv_namespaces]]
+binding = "presence_be_kv"
+id = "2119188a4ae74da5a2412db436adc686"
+preview_id = "presence_be_kv_preview"
+
+# [[r2_buckets]]
+# binding = "MY_BUCKET"
+# bucket_name = "my-bucket"
+
+# [[d1_databases]]
+# binding = "MY_DB"
+# database_name = "my-database"
+# database_id = ""
+
+# [ai]
+# binding = "AI"
+
+# [observability]
+# enabled = true
+# head_sampling_rate = 1

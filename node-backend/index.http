@@ -1,0 +1,12 @@
+###
+POST http://localhost:3000/api/data/query
+Content-Type: application/json
+
+{
+  "year": "2025",
+  "page": 1,
+  "pageSize": 15,
+  "search": {
+    "teacher": "prya"
+  }
+}
