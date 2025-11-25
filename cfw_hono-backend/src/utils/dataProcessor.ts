@@ -6,6 +6,7 @@ export interface SheetDataItem {
   'Hari dan Tanggal Les'?: string;
   'Jam Kegiatan Les'?: string;
   'Timestamp'?: string;
+  'Year'?: string;
   _rowIndex?: number;
   [key: string]: any; // Allow other properties
 }
@@ -273,8 +274,33 @@ export const advancedSearch = (data: SheetDataItem[], searchCriteria: SearchCrit
 
   // Date range filter
   if (searchCriteria.dateFrom || searchCriteria.dateTo) {
-    const fromDate = searchCriteria.dateFrom ? parseTimestamp(searchCriteria.dateFrom) : new Date('1900-01-01');
-    const toDate = searchCriteria.dateTo ? parseTimestamp(searchCriteria.dateTo) : new Date('2100-12-31');
+    // Handle both DD/MM/YYYY and YYYY-MM-DD formats for dateFrom
+    let fromDate: Date;
+    if (searchCriteria.dateFrom) {
+      if (searchCriteria.dateFrom.includes('/')) {
+        fromDate = parseTimestamp(searchCriteria.dateFrom + ' 00:00:00');
+      } else {
+        // Convert YYYY-MM-DD to DD/MM/YYYY for parseTimestamp
+        const [year, month, day] = searchCriteria.dateFrom.split('-');
+        fromDate = parseTimestamp(`${day}/${month}/${year} 00:00:00`);
+      }
+    } else {
+      fromDate = new Date('1900-01-01');
+    }
+    
+    // Handle both DD/MM/YYYY and YYYY-MM-DD formats for dateTo
+    let toDate: Date;
+    if (searchCriteria.dateTo) {
+      if (searchCriteria.dateTo.includes('/')) {
+        toDate = parseTimestamp(searchCriteria.dateTo + ' 23:59:59');
+      } else {
+        // Convert YYYY-MM-DD to DD/MM/YYYY for parseTimestamp
+        const [year, month, day] = searchCriteria.dateTo.split('-');
+        toDate = parseTimestamp(`${day}/${month}/${year} 23:59:59`);
+      }
+    } else {
+      toDate = new Date('2100-12-31');
+    }
     
     filteredData = filteredData.filter(item => {
       const itemDate = parseTimestamp(item['Timestamp'] || '');

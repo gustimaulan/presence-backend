@@ -1,7 +1,7 @@
 import { processSheetData, sortByTimestamp, SheetDataItem } from '../utils/dataProcessor';
 import { CloudflareBindings } from './cacheService'; // Import CloudflareBindings
 
-const BATCH_SIZE = 5000; // Fetch 5000 rows at a time
+const BATCH_SIZE = 10000; // Fetch 5000 rows at a time
 
 interface FetchOptions {
   year?: string | null;
