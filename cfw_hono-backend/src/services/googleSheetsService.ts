@@ -30,7 +30,7 @@ class GoogleSheetsService {
     this.baseURL = 'https://sheets.googleapis.com/v4/spreadsheets';
     this.sheetId = env.GOOGLE_SHEET_ID;
     this.apiKey = env.GOOGLE_API_KEY;
-    this.defaultRange = env.GOOGLE_SHEET_RANGE || 'Sheet1!A:E';
+    this.defaultRange = env.GOOGLE_SHEET_RANGE || 'Sheet1!A:I';
     this.lastKnownRowCount = 0;
 
     if (!this.sheetId || !this.apiKey) {
@@ -100,7 +100,7 @@ class GoogleSheetsService {
    */
   private async _fetchHeaders(currentRange: string): Promise<string[] | null> {
     const sheetName = currentRange.split('!')[0];
-    const columnRange = currentRange.split('!')[1] || 'A:E';
+    const columnRange = currentRange.split('!')[1] || 'A:I';
     const endColumn = columnRange.split(':')[1];
     const headerRange = `${sheetName}!A1:${endColumn}1`;
 
@@ -126,7 +126,7 @@ class GoogleSheetsService {
   async fetchData(options: FetchOptions = {}): Promise<SheetDataItem[]> {
     const { year = null, page = 1, pageSize = 100, fetchAll = false } = options;
 
-    const currentRange = year ? `${year}!A:E` : this.defaultRange;
+    const currentRange = year ? `${year}!A:I` : this.defaultRange;
     console.log(`Fetching data from range: ${currentRange}`);
 
     let rowsToFetch: number;
@@ -159,7 +159,7 @@ class GoogleSheetsService {
       }
 
       const sheetName = currentRange.split('!')[0];
-      const columnRange = currentRange.split('!')[1] || 'A:E';
+      const columnRange = currentRange.split('!')[1] || 'A:I';
       const columns = columnRange.split(':')[0];
       const endColumn = columnRange.split(':')[1];
 

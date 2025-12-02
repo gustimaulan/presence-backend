@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 GOOGLE_SHEET_ID = "1ThSvaWOb-U6OKWc-9nBqccSDSmNSToD5kotqdGJYmrA"
 GOOGLE_API_KEY = "AIzaSyDMLnGgA2f4s5EnS-cqBFiJXUixeiawZ4c"
-GOOGLE_SHEET_RANGE = "Presensi_View!A:E"
+GOOGLE_SHEET_RANGE = "Presensi_View!A:I"
 CACHE_DURATION = "300000"
 ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:3000,https://presensi.sigmath.net,https://all-time.sigmath.net"
 VITE_API_BASE_URL = "http://localhost:3000/api/v1/presensi,https://presensi.sigmath.net/api/v1/presensi"

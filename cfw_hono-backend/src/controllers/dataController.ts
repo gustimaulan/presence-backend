@@ -16,11 +16,29 @@ const getServices = (c: Context<DataContext>) => ({
   cacheService: c.get('cacheService') as CacheService,
 });
 
-async function getData(env: CloudflareBindings, year: string | null, page: number, pageSize: number, searchParams: SearchCriteria) {
+async function getData(env: CloudflareBindings, initialYear: string | null, page: number, pageSize: number, searchParams: SearchCriteria) {
+  // Determine the effective year for data fetching.
+  // If a year is not provided, try to infer it from the dateFrom or dateTo search parameter.
+  let effectiveYear = initialYear;
+  if (!effectiveYear) {
+    const dateFilter = searchParams.dateFrom || searchParams.dateTo;
+    if (dateFilter) {
+      // Extracts YYYY from YYYY-MM-DD or the last part of DD/MM/YYYY
+      if (dateFilter.includes('-')) {
+        // YYYY-MM-DD format
+        effectiveYear = dateFilter.split('-')[0];
+      } else if (dateFilter.includes('/')) {
+        // DD/MM/YYYY format
+        const parts = dateFilter.split('/');
+        effectiveYear = parts.length === 3 ? parts[2] : null;
+      }
+    }
+  }
+
   const cacheService = new CacheService(env);
   const googleSheetsService = new GoogleSheetsService(env);
 
-  const cacheKey = cacheService.generateKey(year, page, pageSize, searchParams);
+  const cacheKey = cacheService.generateKey(initialYear, page, pageSize, searchParams);
   const cachedResult = await cacheService.get(cacheKey);
 
   if (cachedResult) {
@@ -32,7 +50,7 @@ async function getData(env: CloudflareBindings, year: string | null, page: numbe
 
   const startTime = Date.now();
   const allData = await googleSheetsService.fetchData({
-    year: year,
+    year: effectiveYear,
     page: page,
     pageSize: pageSize,
     fetchAll: false
@@ -42,10 +60,11 @@ async function getData(env: CloudflareBindings, year: string | null, page: numbe
   console.log(`Data fetch/load completed in ${fetchTime}ms. Total records: ${allData.length}`);
 
   let filteredData = allData;
-  
-  if (year) {
-    filteredData = filterByYear(filteredData, year);
-    console.log(`Year filter applied: ${filteredData.length} records after filtering by year ${year}`);
+
+  // The year filter is now implicitly handled by fetchData, but we can keep this for safety with other scenarios.
+  if (initialYear) {
+    filteredData = filterByYear(filteredData, initialYear);
+    console.log(`Year filter applied: ${filteredData.length} records after filtering by year ${initialYear}`);
   }
   
   const hasSearchParams = Object.keys(searchParams).length > 0;
@@ -68,7 +87,7 @@ async function getData(env: CloudflareBindings, year: string | null, page: numbe
     data: result.data,
     pagination: result.pagination,
     filters: {
-      year: year || 'all',
+      year: initialYear || 'all',
       ...(hasSearchParams && { search: searchParams })
     },
     fetchedAt: new Date().toISOString(),
@@ -78,7 +97,7 @@ async function getData(env: CloudflareBindings, year: string | null, page: numbe
   };
 
   const searchInfo = hasSearchParams ? JSON.stringify(searchParams) : 'none';
-  console.log(`Data request completed: year=${year || 'all'}, search=${searchInfo}, page=${page}, pageSize=${pageSize}, results=${result.data.length}, fetchTime=${fetchTime}ms`);
+  console.log(`Data request completed: year=${initialYear || 'all'} (fetched from ${effectiveYear || 'all'}), search=${searchInfo}, page=${page}, pageSize=${pageSize}, results=${result.data.length}, fetchTime=${fetchTime}ms`);
 
   return { ...response, cached: false };
 }
@@ -96,34 +115,18 @@ export async function warmupCacheForYear(env: CloudflareBindings, year: string =
 export const getDataController = async (c: Context<DataContext>) => {
   try {
     // Get query parameters from URL
-    const query = c.req.query();
-    const year = query.year || undefined;
-    const page = parseInt(query.page || '1');
-    const pageSize = parseInt(query.pageSize || DEFAULT_PAGE_SIZE.toString());
-    const search = query.search || undefined;
-    const teacher = query.teacher || undefined;
-    const student = query.student || undefined;
-    const dateFrom = query.dateFrom || undefined;
-    const dateTo = query.dateTo || undefined;
+    const { year, page: pageStr = '1', pageSize: pageSizeStr = DEFAULT_PAGE_SIZE.toString(), search, teacher, student, dateFrom, dateTo } = c.req.query();
+    const page = parseInt(pageStr);
+    const pageSize = parseInt(pageSizeStr);
     
     const searchParams: SearchCriteria = {};
     
     // Only add non-empty search parameters
-    if (search && search.trim()) {
-      searchParams.search = search.trim();
-    }
-    if (teacher && teacher.trim()) {
-      searchParams.teacher = teacher.trim();
-    }
-    if (student && student.trim()) {
-      searchParams.student = student.trim();
-    }
-    if (dateFrom && dateFrom.trim()) {
-      searchParams.dateFrom = dateFrom.trim();
-    }
-    if (dateTo && dateTo.trim()) {
-      searchParams.dateTo = dateTo.trim();
-    }
+    if (search?.trim()) searchParams.search = search.trim();
+    if (teacher?.trim()) searchParams.teacher = teacher.trim();
+    if (student?.trim()) searchParams.student = student.trim();
+    if (dateFrom?.trim()) searchParams.dateFrom = dateFrom.trim();
+    if (dateTo?.trim()) searchParams.dateTo = dateTo.trim();
 
     const result = await getData(c.env, year || null, Math.max(1, page), Math.min(MAX_PAGE_SIZE, Math.max(1, pageSize)), searchParams);
     return c.json(result, HTTP_STATUS.OK as any);

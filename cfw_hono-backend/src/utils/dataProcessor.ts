@@ -6,6 +6,7 @@ export interface SheetDataItem {
   'Hari dan Tanggal Les'?: string;
   'Jam Kegiatan Les'?: string;
   'Timestamp'?: string;
+  'Durasi Les'?: string;
   'Year'?: string;
   _rowIndex?: number;
   [key: string]: any; // Allow other properties
@@ -215,7 +216,8 @@ export const searchData = (data: SheetDataItem[], searchTerm: string): SheetData
       item['Nama Siswa'] || '',            // Student name
       item['Hari dan Tanggal Les'] || '',  // Lesson date
       item['Jam Kegiatan Les'] || '',      // Lesson time
-      item['Timestamp'] || ''              // Timestamp
+      item['Timestamp'] || '',             // Timestamp
+      item['Durasi Les'] || ''             // Duration of lesson
     ];
 
     // Check if any field contains the search term

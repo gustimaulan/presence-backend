@@ -4,7 +4,8 @@ export const REQUIRED_FIELDS: string[] = [
   "Nama Siswa",            // Student name (string)
   "Hari dan Tanggal Les",  // Lesson date (DD/MM/YYYY format)
   "Jam Kegiatan Les",      // Lesson time (HH:mm format)
-  "Timestamp"              // Entry timestamp (datetime in Asia/Jakarta timezone)
+  "Timestamp",             // Entry timestamp (datetime in Asia/Jakarta timezone)
+  "Durasi Les"            // Duration of the lesson (in minutes)
 ];
 
 export const DEFAULT_PAGE_SIZE: number = 15;
