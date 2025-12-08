@@ -8,6 +8,7 @@ export const getDataQuerySchema = z.object({
   search: z.string().optional(),
   teacher: z.string().optional(),
   student: z.string().optional(),
+  email: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
 });
@@ -20,6 +21,7 @@ export const postDataQuerySchema = z.object({
     search: z.string().optional(),
     teacher: z.string().optional(),
     student: z.string().optional(),
+    email: z.string().optional(),
     dateFrom: z.string().optional(),
     dateTo: z.string().optional(),
   }).optional().default({}),

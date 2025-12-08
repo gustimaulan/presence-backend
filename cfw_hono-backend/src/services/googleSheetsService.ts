@@ -30,7 +30,7 @@ class GoogleSheetsService {
     this.baseURL = 'https://sheets.googleapis.com/v4/spreadsheets';
     this.sheetId = env.GOOGLE_SHEET_ID;
     this.apiKey = env.GOOGLE_API_KEY;
-    this.defaultRange = env.GOOGLE_SHEET_RANGE || 'Sheet1!A:I';
+    this.defaultRange = env.GOOGLE_SHEET_RANGE || 'Sheet1!A:J';
     this.lastKnownRowCount = 0;
 
     if (!this.sheetId || !this.apiKey) {
@@ -126,7 +126,7 @@ class GoogleSheetsService {
   async fetchData(options: FetchOptions = {}): Promise<SheetDataItem[]> {
     const { year = null, page = 1, pageSize = 100, fetchAll = false } = options;
 
-    const currentRange = year ? `${year}!A:I` : this.defaultRange;
+    const currentRange = year ? `${year}!A:J` : this.defaultRange;
     console.log(`Fetching data from range: ${currentRange}`);
 
     let rowsToFetch: number;

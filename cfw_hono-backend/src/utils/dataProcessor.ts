@@ -7,6 +7,7 @@ export interface SheetDataItem {
   'Jam Kegiatan Les'?: string;
   'Timestamp'?: string;
   'Durasi Les'?: string;
+  'Email Address'?: string;
   'Year'?: string;
   _rowIndex?: number;
   [key: string]: any; // Allow other properties
@@ -217,11 +218,12 @@ export const searchData = (data: SheetDataItem[], searchTerm: string): SheetData
       item['Hari dan Tanggal Les'] || '',  // Lesson date
       item['Jam Kegiatan Les'] || '',      // Lesson time
       item['Timestamp'] || '',             // Timestamp
-      item['Durasi Les'] || ''             // Duration of lesson
+      item['Durasi Les'] || '',            // Duration of lesson
+      item['Email Address'] || ''          // Email address
     ];
 
     // Check if any field contains the search term
-    return searchableFields.some(field => 
+    return searchableFields.some(field =>
       String(field).toLowerCase().includes(term)
     );
   });
@@ -231,6 +233,7 @@ export interface SearchCriteria {
   search?: string | null;
   teacher?: string | null;
   student?: string | null;
+  email?: string | null;
   dateFrom?: string | null;
   dateTo?: string | null;
 }
@@ -271,6 +274,11 @@ export const advancedSearch = (data: SheetDataItem[], searchCriteria: SearchCrit
     const studentTerm = searchCriteria.student.toLowerCase().trim();
     filteredData = filteredData.filter(item =>
       (item['Nama Siswa'] || '').toLowerCase().includes(studentTerm)
+    );
+  } else if (searchCriteria.email) {
+    const emailTerm = searchCriteria.email.toLowerCase().trim();
+    filteredData = filteredData.filter(item =>
+      (item['Email Address'] || '').toLowerCase().includes(emailTerm)
     );
   }
 

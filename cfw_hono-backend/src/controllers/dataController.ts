@@ -115,7 +115,7 @@ export async function warmupCacheForYear(env: CloudflareBindings, year: string =
 export const getDataController = async (c: Context<DataContext>) => {
   try {
     // Get query parameters from URL
-    const { year, page: pageStr = '1', pageSize: pageSizeStr = DEFAULT_PAGE_SIZE.toString(), search, teacher, student, dateFrom, dateTo } = c.req.query();
+    const { year, page: pageStr = '1', pageSize: pageSizeStr = DEFAULT_PAGE_SIZE.toString(), search, teacher, student, email, dateFrom, dateTo } = c.req.query();
     const page = parseInt(pageStr);
     const pageSize = parseInt(pageSizeStr);
     
@@ -125,6 +125,7 @@ export const getDataController = async (c: Context<DataContext>) => {
     if (search?.trim()) searchParams.search = search.trim();
     if (teacher?.trim()) searchParams.teacher = teacher.trim();
     if (student?.trim()) searchParams.student = student.trim();
+    if (email?.trim()) searchParams.email = email.trim();
     if (dateFrom?.trim()) searchParams.dateFrom = dateFrom.trim();
     if (dateTo?.trim()) searchParams.dateTo = dateTo.trim();
 
@@ -156,6 +157,9 @@ export const postDataQueryController = async (c: Context<DataContext>) => {
     }
     if (rawSearchParams.student && rawSearchParams.student.trim()) {
       searchParams.student = rawSearchParams.student.trim();
+    }
+    if (rawSearchParams.email && rawSearchParams.email.trim()) {
+      searchParams.email = rawSearchParams.email.trim();
     }
     if (rawSearchParams.dateFrom && rawSearchParams.dateFrom.trim()) {
       searchParams.dateFrom = rawSearchParams.dateFrom.trim();
