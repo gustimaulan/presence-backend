@@ -349,7 +349,7 @@ export const getStudentsController = async (c: Context<DataContext>) => {
 
     console.log(`Cache miss for unique student names. Fetching targeted column...`);
     
-    const sheets = [currentYear, (parseInt(currentYear) - 1).toString()];
+    const sheets = [currentYear];
     const uniqueNames = await googleSheetsService.fetchUniqueColumnValues(sheets, 'Nama Siswa');
     
     await cacheService.set(cacheKey, uniqueNames);
