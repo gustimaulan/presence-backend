@@ -308,19 +308,21 @@ export const getStatusController = async (c: Context<DataContext>) => {
 export const getTutorsController = async (c: Context<DataContext>) => {
   try {
     const currentYear = new Date().getFullYear().toString();
-    const cacheKey = `unique_tutor_names_${currentYear}`;
+    const cacheKey = `unique_tutor_names_v2`;
     const { cacheService, googleSheetsService } = getServices(c);
     const cachedResult = await cacheService.get(cacheKey);
 
     if (cachedResult) {
-      console.log(`Cache hit for unique tutor names for ${currentYear}: ${cacheKey}`);
+      console.log(`Cache hit for unique tutor names: ${cacheKey}`);
       return c.json({ names: cachedResult, cached: true }, HTTP_STATUS.OK as any);
     }
 
-    console.log(`Cache miss for unique tutor names for ${currentYear}. Fetching all data for ${currentYear}...`);
-    const allData = await googleSheetsService.fetchData({ year: currentYear, fetchAll: true });
-    const uniqueNames = getUniqueTutorNames(allData);
-    await cacheService.set(cacheKey, uniqueNames); // Cache for 1 hour (default TTL)
+    console.log(`Cache miss for unique tutor names. Fetching targeted column...`);
+    
+    const sheets = [currentYear];
+    const uniqueNames = await googleSheetsService.fetchUniqueColumnValues(sheets, 'Nama Tentor');
+    
+    await cacheService.set(cacheKey, uniqueNames);
 
     return c.json({ names: uniqueNames, cached: false }, HTTP_STATUS.OK as any);
   } catch (error: any) {
@@ -335,7 +337,8 @@ export const getTutorsController = async (c: Context<DataContext>) => {
 
 export const getStudentsController = async (c: Context<DataContext>) => {
   try {
-    const cacheKey = 'unique_student_names';
+    const currentYear = new Date().getFullYear().toString();
+    const cacheKey = 'unique_student_names_v2';
     const { cacheService, googleSheetsService } = getServices(c);
     const cachedResult = await cacheService.get(cacheKey);
 
@@ -344,10 +347,12 @@ export const getStudentsController = async (c: Context<DataContext>) => {
       return c.json({ names: cachedResult, cached: true }, HTTP_STATUS.OK as any);
     }
 
-    console.log(`Cache miss for unique student names. Fetching all data...`);
-    const allData = await googleSheetsService.fetchData({ year: null, fetchAll: true });
-    const uniqueNames = getUniqueStudentNames(allData);
-    await cacheService.set(cacheKey, uniqueNames); // Cache for 1 hour (default TTL)
+    console.log(`Cache miss for unique student names. Fetching targeted column...`);
+    
+    const sheets = [currentYear, (parseInt(currentYear) - 1).toString()];
+    const uniqueNames = await googleSheetsService.fetchUniqueColumnValues(sheets, 'Nama Siswa');
+    
+    await cacheService.set(cacheKey, uniqueNames);
 
     return c.json({ names: uniqueNames, cached: false }, HTTP_STATUS.OK as any);
   } catch (error: any) {

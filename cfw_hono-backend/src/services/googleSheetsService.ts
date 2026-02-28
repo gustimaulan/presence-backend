@@ -119,6 +119,97 @@ class GoogleSheetsService {
   }
 
   /**
+   * Convert a 0-based column index to a spreadsheet column letter (0 -> A, 1 -> B, ..., 25 -> Z, 26 -> AA).
+   * @private
+   */
+  private _columnIndexToLetter(index: number): string {
+    let letter = '';
+    let i = index;
+    while (i >= 0) {
+      letter = String.fromCharCode((i % 26) + 65) + letter;
+      i = Math.floor(i / 26) - 1;
+    }
+    return letter;
+  }
+
+  /**
+   * Fetch unique values for a specific column (by header name) from one or more sheets.
+   * Dynamically resolves the column letter by reading the header row first.
+   * @param {string[]} sheets - Array of sheet names (e.g., ['2025', '2024'])
+   * @param {string} headerName - The header name to look for (e.g., 'Nama Tentor')
+   * @returns {Promise<string[]>} - Array of unique, sorted values from that column
+   */
+  async fetchUniqueColumnValues(sheets: string[], headerName: string): Promise<string[]> {
+    try {
+      if (sheets.length === 0) return [];
+
+      // 1. Fetch headers from the first sheet to find the column index
+      const headerRange = `${sheets[0]}!1:1`;
+      const headerUrl = `${this.baseURL}/${this.sheetId}/values/${encodeURIComponent(headerRange)}`;
+      const headerController = new AbortController();
+      const headerTimeoutId = setTimeout(() => headerController.abort(), 15000);
+
+      const headerRequestFn = () => fetch(`${headerUrl}?key=${this.apiKey}`, {
+        headers: { 'User-Agent': 'Presence-API/1.0.0' },
+        signal: headerController.signal,
+      }).finally(() => clearTimeout(headerTimeoutId));
+
+      const headerResponse = await this._retryRequest<{ values: string[][] }>(headerRequestFn, 2, 500);
+      const headers = headerResponse.values?.[0];
+      if (!headers) {
+        console.error(`No headers found in sheet ${sheets[0]}`);
+        return [];
+      }
+
+      const colIndex = headers.findIndex(h => h.trim() === headerName);
+      if (colIndex === -1) {
+        console.error(`Header "${headerName}" not found in sheet ${sheets[0]}. Available headers: ${headers.join(', ')}`);
+        return [];
+      }
+
+      const colLetter = this._columnIndexToLetter(colIndex);
+      console.log(`Resolved header "${headerName}" to column ${colLetter} (index ${colIndex})`);
+
+      // 2. Fetch only that column from all requested sheets via batchGet
+      const ranges = sheets.map(sheet => `${sheet}!${colLetter}:${colLetter}`);
+
+      const url = `${this.baseURL}/${this.sheetId}/values:batchGet`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const queryParams = new URLSearchParams();
+      queryParams.append('key', this.apiKey);
+      queryParams.append('majorDimension', 'ROWS');
+      ranges.forEach(range => queryParams.append('ranges', range));
+
+      const requestFn = () => fetch(`${url}?${queryParams.toString()}`, {
+        headers: { 'User-Agent': 'Presence-API/1.0.0' },
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
+
+      const responseData = await this._retryRequest<{ valueRanges: { values: string[][] }[] }>(requestFn);
+      const valueRanges = responseData.valueRanges || [];
+
+      // 3. Extract unique values, skipping the header row itself
+      const uniqueValues = new Set<string>();
+      for (const valueRange of valueRanges) {
+        if (!valueRange.values) continue;
+        for (const row of valueRange.values) {
+          const val = row[0];
+          if (val && val.trim() && val.trim() !== headerName) {
+            uniqueValues.add(val.trim());
+          }
+        }
+      }
+
+      return Array.from(uniqueValues).sort();
+    } catch (error: any) {
+      console.error(`Error in fetchUniqueColumnValues for "${headerName}":`, error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Fetch data from Google Sheets with batching and reverse order fetching.
    * @param {FetchOptions} options - Fetching options.
    * @returns {Promise<SheetDataItem[]>} - Processed and sorted data array.
