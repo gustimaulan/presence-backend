@@ -11,6 +11,7 @@ import {
   getStatusController,
   getTutorsController,
   getStudentsController,
+  getSuggestionsController,
   postCacheClearController,
   warmupCacheForYear,
 } from '../controllers/dataController';
@@ -63,6 +64,9 @@ dataRoutes.get('/tutors', getTutorsController);
 
 // GET /api/students
 dataRoutes.get('/students', getStudentsController);
+
+// GET /api/suggestions
+dataRoutes.get('/suggestions', getSuggestionsController);
 
 // POST /api/cache/clear
 dataRoutes.post('/cache/clear', postCacheClearController);

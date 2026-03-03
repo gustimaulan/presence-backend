@@ -57,11 +57,11 @@ class CacheService {
     }
   }
 
-  async set(key: string, data: any): Promise<void> {
+  async set(key: string, data: any, ttl?: number): Promise<void> {
     try {
       const jsonData = JSON.stringify(data);
       // Cloudflare KV uses expirationTtl in seconds
-      const expirationTtl = Math.floor(this.cacheDuration / 1000);
+      const expirationTtl = ttl ? Math.floor(ttl / 1000) : Math.floor(this.cacheDuration / 1000);
       await this.cacheKV.put(key, jsonData, { expirationTtl });
       console.log(`Data cached with key: ${key}, expires in: ${expirationTtl}s`);
     } catch (error) {

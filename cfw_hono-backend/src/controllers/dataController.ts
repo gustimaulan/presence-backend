@@ -365,6 +365,48 @@ export const getStudentsController = async (c: Context<DataContext>) => {
   }
 };
 
+export const getSuggestionsController = async (c: Context<DataContext>) => {
+  try {
+    const currentYear = new Date().getFullYear().toString();
+    const sheets = [currentYear]; // Can expand to multiple years if needed
+    const cacheKey = `suggestions_combined_v1_${currentYear}`;
+    
+    const { cacheService, googleSheetsService } = getServices(c);
+    const cachedResult = await cacheService.get(cacheKey);
+
+    if (cachedResult) {
+      console.log(`Cache hit for search suggestions: ${cacheKey}`);
+      return c.json({ ...cachedResult, cached: true }, HTTP_STATUS.OK as any);
+    }
+
+    console.log(`Cache miss for search suggestions. Fetching tutors and students...`);
+    
+    // Fetch both tutor and student names in parallel for efficiency
+    const [tutors, students] = await Promise.all([
+      googleSheetsService.fetchUniqueColumnValues(sheets, 'Nama Tentor'),
+      googleSheetsService.fetchUniqueColumnValues(sheets, 'Nama Siswa')
+    ]);
+    
+    const result = {
+      tutors,
+      students,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Cache for a long duration (1 hour) as these lists are relatively static
+    await cacheService.set(cacheKey, result, 3600000);
+
+    return c.json({ ...result, cached: false }, HTTP_STATUS.OK as any);
+  } catch (error: any) {
+    console.error('Error in /api/suggestions:', error.message);
+    return c.json({
+      error: true,
+      message: error.message || 'Failed to retrieve suggestions',
+      timestamp: new Date().toISOString()
+    }, HTTP_STATUS.INTERNAL_SERVER_ERROR as any);
+  }
+};
+
 export const postCacheClearController = async (c: Context<DataContext>) => {
   try {
     const { cacheService } = getServices(c);

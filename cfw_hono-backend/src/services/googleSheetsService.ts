@@ -25,6 +25,7 @@ class GoogleSheetsService {
   private apiKey: string;
   private defaultRange: string;
   private lastKnownRowCount: number;
+  private headerCache: Map<string, string[]> = new Map();
 
   constructor(env: CloudflareBindings) {
     this.baseURL = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -115,7 +116,13 @@ class GoogleSheetsService {
 
     console.log(`Fetching headers from: ${headerRange}`);
     const responseData = await this._retryRequest<{ values: string[][] }>(requestFn);
-    return responseData.values ? responseData.values[0] : null;
+    const headers = responseData.values ? responseData.values[0] : null;
+    
+    if (headers) {
+      this.headerCache.set(sheetName, headers);
+    }
+    
+    return headers;
   }
 
   /**
@@ -143,19 +150,28 @@ class GoogleSheetsService {
     try {
       if (sheets.length === 0) return [];
 
-      // 1. Fetch headers from the first sheet to find the column index
-      const headerRange = `${sheets[0]}!1:1`;
-      const headerUrl = `${this.baseURL}/${this.sheetId}/values/${encodeURIComponent(headerRange)}`;
-      const headerController = new AbortController();
-      const headerTimeoutId = setTimeout(() => headerController.abort(), 15000);
+      // 1. Check cache first for headers
+      let headers = this.headerCache.get(sheets[0]);
+      
+      if (!headers) {
+        const headerRange = `${sheets[0]}!1:1`;
+        const headerUrl = `${this.baseURL}/${this.sheetId}/values/${encodeURIComponent(headerRange)}`;
+        const headerController = new AbortController();
+        const headerTimeoutId = setTimeout(() => headerController.abort(), 15000);
 
-      const headerRequestFn = () => fetch(`${headerUrl}?key=${this.apiKey}`, {
-        headers: { 'User-Agent': 'Presence-API/1.0.0' },
-        signal: headerController.signal,
-      }).finally(() => clearTimeout(headerTimeoutId));
+        const headerRequestFn = () => fetch(`${headerUrl}?key=${this.apiKey}`, {
+          headers: { 'User-Agent': 'Presence-API/1.0.0' },
+          signal: headerController.signal,
+        }).finally(() => clearTimeout(headerTimeoutId));
 
-      const headerResponse = await this._retryRequest<{ values: string[][] }>(headerRequestFn, 2, 500);
-      const headers = headerResponse.values?.[0];
+        const headerResponse = await this._retryRequest<{ values: string[][] }>(headerRequestFn, 2, 500);
+        headers = headerResponse.values?.[0];
+        
+        if (headers) {
+          this.headerCache.set(sheets[0], headers);
+        }
+      }
+
       if (!headers) {
         console.error(`No headers found in sheet ${sheets[0]}`);
         return [];
